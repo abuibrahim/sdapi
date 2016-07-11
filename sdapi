@@ -1,19 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-import urllib2, pprint, json, os, sys, errno, argparse, requests, json
+import pprint, json, os, sys, requests, json
 
 ## STATIC VALUES
 
 __version__ = "3.0.0a"
 
 CONFIG = {}
-
-## SETUP COMMAND LINE PARSER ##
-
-parser = argparse.ArgumentParser(prog='sdapi', description='SlamData API Tool')
-args=parser.parse_args()
-
 
 def setup_config():
 
@@ -560,8 +554,6 @@ def main():
     print_main_menu()
 
     sys.exit(0)
-
-
 
 
 if __name__ == "__main__":
