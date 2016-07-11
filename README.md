@@ -43,14 +43,14 @@ file is not found, it will ask 3 questions.
 
 1. The base URL of the SlamData web application
 
-If you installed locally this is most likely something
-like ```http://localhost:20223``` or some other port.
+	If you installed locally this is most likely something
+	like ```http://localhost:20223``` or some other port.
 
 2. The email address of a user that belongs to the
    administrators group.
 
-This group was created when you originally ran the `bootstrap`
-function when installing SlamData Advanced Edition.
+	This group was created when you originally ran the `bootstrap`
+	function when installing SlamData Advanced Edition.
 
 3. A Bearer Token
 
