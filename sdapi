@@ -1,0 +1,430 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
+import urllib2, pprint, json, os, sys, errno, argparse, requests
+
+## STATIC VALUES
+
+__version__ = "3.0.0a"
+
+CONFIG = {}
+
+## SETUP COMMAND LINE PARSER ##
+
+parser = argparse.ArgumentParser(prog='sdapi', description='SlamData API Tool')
+args=parser.parse_args()
+
+
+def setup_config():
+
+	print "Enter base URL for API.  Such as http://localhost:8080"
+	base_url = raw_input("Base URL: ")
+	print "Enter admin email address to authenticate with"
+	email = raw_input("Admin email: ")
+	print "Enter Bearer token string (provided by OP)"
+	bearer = raw_input("Bearer token: ")
+
+	config = {"base_url":base_url,"email":email,"bearer":bearer}
+	return config
+
+
+def print_current_config(_CONFIG):
+
+	print "\nCurrent configuration:"
+
+	options=_CONFIG.keys()
+	options.sort()
+
+	for entry in options:
+
+		print entry, _CONFIG[entry]
+
+
+def load_config(_config_file):
+
+	if os.path.exists(_config_file) is True:
+
+		with open(_config_file, 'r') as f:
+
+			_CONFIG = json.load(f)
+			print "\nConfiguration file " + str (_config_file) + " loaded."
+			return _CONFIG
+
+	else:
+
+		print "\nConfiguration file " + str(_config_file) + " not found."
+		return
+
+
+def save_config(_config_file, _CONFIG):
+
+	global CONFIG
+	with open(_config_file, 'w') as f:
+
+		json.dump(_CONFIG, f)
+
+	CONFIG = _CONFIG
+	print "\nConfiguration file updated.\n"
+
+
+def print_providers():
+
+	global CONFIG
+
+	url = CONFIG['base_url'] + "/security/oidc/providers"
+	print "Calling " + str(url)
+	response = requests.get(url)
+	pp = pprint.PrettyPrinter(indent=4, depth=4)
+	pp.pprint(response.json())
+
+
+def print_menu(_menu):
+
+	options=_menu.keys()
+	options.sort()
+
+	for entry in options:
+
+		print entry, _menu[entry]
+
+
+def create_group():
+
+	global CONFIG
+
+	print "Enter path for new group prefixed with slash (example: /engineering)"
+	group_path = raw_input("Path: ")
+
+	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	print "Calling " + str(url)
+	response = requests.post(url)
+	code = response.status_code
+	print "status:" + str(code)
+
+
+def delete_group():
+
+	global CONFIG
+
+	print "Enter path of group prefixed with slash (example: /engineering)"
+	group_path = raw_input("Path: ")
+
+	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	print "Calling " + str(url)
+	response = requests.delete(url)
+	code = response.status_code
+	print "status:" + str(code)
+
+
+def print_group():
+
+	global CONFIG
+
+	print "Enter path for group prefixed with slash (example: /engineering)"
+	group_path = raw_input("Path: ")
+
+	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	print "Calling " + str(url)
+	response = requests.get(url)
+	pp = pprint.PrettyPrinter(indent=4, depth=4)
+	pp.pprint(response.json())
+
+
+def add_user_to_group():
+
+	global CONFIG
+
+	print "Enter path of group prefixed with slash (example: /engineering)"
+	group_path = raw_input("Path: ")
+	print "Enter email address of user to add to this group"
+	user_email = raw_input("Email:" )
+
+	data = {}
+	data['addUsers'] = [user_email]
+	data['removeUsers'] = []
+	json_data = json.dumps(data)
+
+	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	print "Calling " + str(url)
+	response = requests.patch(url, json_data)
+	code = response.status_code
+	print "status:" + str(code)
+
+
+def delete_user_from_group():
+
+	global CONFIG
+
+	print "Enter path of group prefixed with slash (example: /engineering)"
+	group_path = raw_input("Path: ")
+	print "Enter email address of user to remove from this group"
+	user_email = raw_input("Email:" )
+
+	data = {}
+	data['addUsers'] = []
+	data['removeUsers'] = [user_email]
+	json_data = json.dumps(data)
+
+	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	print "Calling " + str(url)
+	response = requests.patch(url, json_data)
+	code = response.status_code
+	print "status:" + str(code)
+
+
+def print_group_menu():
+
+	group_menu = {}
+	group_menu['1'] = "Print Group"
+	group_menu['2'] = "Create Group"
+	group_menu['3'] = "Delete Group"
+	group_menu['4'] = "Add User to Group"
+	group_menu['5'] = "Delete User from Group"
+	group_menu['q'] = "Go back"
+
+	while True:
+
+		print "\n== GROUPS ==\n"
+
+		print_menu(group_menu)
+
+		selection=raw_input("\nChoice:")
+
+		if selection=='1':
+
+			print_group()
+
+		elif selection=='2':
+
+			create_group()
+
+		elif selection=='3':
+
+			delete_group()
+
+		elif selection=='4':
+
+			add_user_to_group()
+
+		elif selection=='5':
+
+			delete_user_from_group()
+
+		elif selection=='q':
+			break
+
+		else:
+
+			print "Unknown choice"
+
+	return
+
+
+def input_action():
+
+	operation = ""
+	resource = ""
+	accessType = ""
+
+	print "\nEnter operation.  ONE of [A]dd, [R]ead, [M]odify or [D]elete"
+	operation = raw_input("operation  : ")
+
+	if not operation:
+
+		return None
+
+	else:
+
+		if operation.lower() == 'a':
+			operation = 'ADD'
+		elif operation.lower() == 'r':
+			operation = 'READ'
+		elif operation.lower() == 'm':
+			operation = 'MODIFY'
+		elif operation.lower() == 'd':
+			operation = 'DELETE'
+
+	print "\nEnter resource.  <data:filesystem_path>|<group:group_path>"
+	resource =  raw_input("resource   : ")
+
+	if not resource:
+
+		return None
+
+	print "\nEnter Access Type. One of [S]tructural, [C]ontent or [M]ount"
+	accessType =  raw_input("accessType : ")
+
+	if not accessType:
+
+		return None
+
+	else:
+
+		if accessType.lower() == 's':
+			accessType = 'Structural'
+		elif accessType.lower() == 'c':
+			accessType = 'Content'
+		elif accessType.lower() == 'm':
+			accessType = 'Mount'
+
+	action = {}
+	action['operation'] = operation
+	action['resource'] = resource
+	action['accessType'] = accessType
+	return action
+
+
+def create_permission():
+
+	global CONFIG
+
+	actions = []
+
+	while True:
+
+		print "\n -=>  Enter as many actions as you like. Leave any field empty to stop  <=-\n"
+
+		action = input_action()
+
+		if not action:
+
+			break
+
+		else:
+
+			actions.append(action)
+
+	print "Actions:" + str(actions)
+	print "Enter <user:email_address> or <group:/path/to/group> to assign to"
+	subject = raw_input("subject: ")
+
+	data = {}
+	data['users'] = [subject]
+	data['actions'] = actions
+	data['groups'] = ['/test1']
+	json_data = json.dumps(data)
+
+	url = CONFIG['base_url'] + "/security/permission"
+	headers = {'Authorization':'Bearer '+str(CONFIG['bearer'])}
+	#print "Calling " + str(url)
+	#print "with header:" + str(headers)
+	#print "with JSON:" + str(json_data)
+	response = requests.post(url, json_data, headers=headers)
+	print "response:" + str(response.text)
+
+
+def print_permissions_menu():
+
+	group_menu = {}
+	group_menu['1'] = "Print Permission"
+	group_menu['2'] = "Create Permission"
+	group_menu['3'] = "Delete Permission"
+	group_menu['4'] = "Assign Permission"
+	group_menu['q'] = "Go back"
+
+	while True:
+
+		print "\n== GROUPS ==\n"
+
+		print_menu(group_menu)
+
+		selection=raw_input("\nChoice:")
+
+		if selection=='1':
+
+			print "print permission"
+
+		elif selection=='2':
+
+			create_permission()
+
+		elif selection=='3':
+
+			delete_permission()
+
+		elif selection=='4':
+
+			assign_permission()
+
+		elif selection=='q':
+			break
+
+		else:
+
+			print "Unknown choice"
+
+	return
+
+
+def print_main_menu():
+
+	global CONFIG
+	main_menu = {}
+	main_menu['1'] = "Groups"
+	main_menu['2'] = "Tokens"
+	main_menu['3'] = "Permissions"
+	main_menu['4'] = "Print Providers"
+	main_menu['5'] = "Modify config"
+	main_menu['q'] = "-Quit-"
+
+	while True:
+
+		print "\n== MAIN ==\n"
+
+		print_menu(main_menu)
+
+		selection=raw_input("\nChoice:")
+
+		if selection=='1':
+
+			print_group_menu()
+
+		elif selection=='2':
+
+			print "tokens"
+
+		elif selection=='3':
+
+			print_permissions_menu()
+
+		elif selection=='4':
+
+			print_providers()
+
+		elif selection=='5':
+
+			print_current_config(CONFIG)
+			_CONFIG = setup_config()
+			save_config('sdapi.json', _CONFIG)
+
+		elif selection=='q':
+
+			break
+
+		else:
+			print "Unknown choice"
+
+
+def main():
+
+    global CONFIG
+    CONFIG = load_config('sdapi.json')
+
+    print "\n*** NOT INTENDED FOR PRODUCTION USE ***\n"
+    print "           SlamData API Tool\n"
+
+    if not CONFIG:
+
+    	CONFIG = setup_config()
+    	save_config('sdapi.json', CONFIG)
+
+    print_main_menu()
+
+    sys.exit(0)
+
+
+
+
+if __name__ == "__main__":
+
+    main()
