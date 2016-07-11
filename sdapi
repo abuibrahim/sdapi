@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-import urllib2, pprint, json, os, sys, errno, argparse, requests
+import urllib2, pprint, json, os, sys, errno, argparse, requests, json
 
 ## STATIC VALUES
 
@@ -109,11 +109,16 @@ def delete_group():
 	print "Enter path of group prefixed with slash (example: /engineering)"
 	group_path = raw_input("Path: ")
 
-	url = CONFIG['base_url'] + "/security/group" + str(group_path)
-	print "Calling " + str(url)
-	response = requests.delete(url)
-	code = response.status_code
-	print "status:" + str(code)
+	if not group_path:
+		print "No group entered."
+		return
+
+	else:
+		url = CONFIG['base_url'] + "/security/group" + str(group_path)
+		print "Calling " + str(url)
+		response = requests.delete(url)
+		code = response.status_code
+		print "status:" + str(code)
 
 
 def print_group():
@@ -146,6 +151,7 @@ def add_user_to_group():
 
 	url = CONFIG['base_url'] + "/security/group" + str(group_path)
 	print "Calling " + str(url)
+	print "json_data:" + str(json_data)
 	response = requests.patch(url, json_data)
 	code = response.status_code
 	print "status:" + str(code)
@@ -274,6 +280,35 @@ def input_action():
 	return action
 
 
+def print_permission():
+
+	global CONFIG
+
+	print "Enter permission ID to view"
+	perm_id = raw_input("id:")
+
+	url = CONFIG['base_url'] + "/security/permission/" + str(perm_id)
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
+	response = requests.get(url, headers=headers)
+
+	pp = pprint.PrettyPrinter(indent=4, depth=4)
+	pp.pprint(response.json())
+
+
+def delete_permission():
+
+	global CONFIG
+
+	print "Enter permission ID to delete"
+	perm_id = raw_input("id:")
+
+	url = CONFIG['base_url'] + "/security/permission/" + str(perm_id)
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
+	response = requests.delete(url, headers=headers)
+	print "response:" + str(response)
+	print "response.text:" + str(response.text)
+
+
 def create_permission():
 
 	global CONFIG
@@ -295,31 +330,43 @@ def create_permission():
 			actions.append(action)
 
 	print "Actions:" + str(actions)
-	print "Enter <user:email_address> or <group:/path/to/group> to assign to"
-	subject = raw_input("subject: ")
+	print "Enter target subjects <user:email_address> or <group:/path/to/group> to assign to. One entry per line."
+	print "Enter empty value when finished."
+	subjects = []
+
+	while True:
+
+		subject = raw_input("subject: ")
+
+		if not subject:
+
+			break
+
+		else:
+
+			subjects.append(subject)
 
 	data = {}
-	data['users'] = [subject]
+	data['subjects'] = subjects
 	data['actions'] = actions
-	data['groups'] = ['/test1']
 	json_data = json.dumps(data)
 
 	url = CONFIG['base_url'] + "/security/permission"
-	headers = {'Authorization':'Bearer '+str(CONFIG['bearer'])}
-	#print "Calling " + str(url)
-	#print "with header:" + str(headers)
-	#print "with JSON:" + str(json_data)
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
+	print "Calling " + str(url)
+	print "with header:" + str(headers)
+	print "with json_data:" + str(json_data)
 	response = requests.post(url, json_data, headers=headers)
-	print "response:" + str(response.text)
+	print "response:" + str(response)
+	print "response.text" + str(response.text)
 
 
 def print_permissions_menu():
 
 	group_menu = {}
-	group_menu['1'] = "Print Permission"
+	group_menu['1'] = "Print Permission (Transitive)"
 	group_menu['2'] = "Create Permission"
 	group_menu['3'] = "Delete Permission"
-	group_menu['4'] = "Assign Permission"
 	group_menu['q'] = "Go back"
 
 	while True:
@@ -332,7 +379,7 @@ def print_permissions_menu():
 
 		if selection=='1':
 
-			print "print permission"
+			print_permission()
 
 		elif selection=='2':
 
@@ -342,9 +389,101 @@ def print_permissions_menu():
 
 			delete_permission()
 
-		elif selection=='4':
+		elif selection=='q':
+			break
 
-			assign_permission()
+		else:
+
+			print "Unknown choice"
+
+	return
+
+
+def print_token():
+
+	global CONFIG
+
+	print "Enter token ID to view"
+	token_id = raw_input("id:")
+
+	url = CONFIG['base_url'] + "/security/token/" + str(token_id)
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
+	response = requests.get(url, headers=headers)
+
+	pp = pprint.PrettyPrinter(indent=4, depth=4)
+	pp.pprint(response.json())
+
+
+def create_token():
+
+	global CONFIG
+
+	actions = []
+
+	while True:
+
+		print "\n -=>  Enter as many actions as you like. Leave any field empty to stop  <=-\n"
+
+		action = input_action()
+
+		if not action:
+
+			break
+
+		else:
+
+			actions.append(action)
+
+	print "Actions:" + str(actions)
+
+	print "Enter an *optional* name for this token"
+	name = raw_input("name: ")
+
+	data = {}
+
+	if name:
+		data['name'] = name
+
+	data['actions'] = actions
+	json_data = json.dumps(data)
+
+	url = CONFIG['base_url'] + "/security/token"
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
+	print "Calling " + str(url)
+	print "with header:" + str(headers)
+	print "with json_data:" + str(json_data)
+	response = requests.post(url, json_data, headers=headers)
+	print "response:" + str(response)
+	print "response.text" + str(response.text)
+
+
+def print_token_menu():
+
+	token_menu = {}
+	token_menu['1'] = "Print Token"
+	token_menu['2'] = "Create Token"
+	token_menu['3'] = "Delete Token"
+	token_menu['q'] = "Go back"
+
+	while True:
+
+		print "\n== GROUPS ==\n"
+
+		print_menu(token_menu)
+
+		selection=raw_input("\nChoice:")
+
+		if selection=='1':
+
+			print_token()
+
+		elif selection=='2':
+
+			create_token()
+
+		elif selection=='3':
+
+			print "delete token"
 
 		elif selection=='q':
 			break
@@ -381,7 +520,7 @@ def print_main_menu():
 
 		elif selection=='2':
 
-			print "tokens"
+			print_token_menu()
 
 		elif selection=='3':
 
