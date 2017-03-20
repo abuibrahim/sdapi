@@ -66,8 +66,9 @@ def print_providers():
 	global CONFIG
 
 	url = CONFIG['base_url'] + "/security/oidc/providers"
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
 	print "Calling " + str(url)
-	response = requests.get(url)
+	response = requests.get(url, headers=headers)
 	pp = pprint.PrettyPrinter(indent=4, depth=4)
 	pp.pprint(response.json())
 
@@ -90,8 +91,9 @@ def create_group():
 	group_path = raw_input("Path: ")
 
 	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
 	print "Calling " + str(url)
-	response = requests.post(url)
+	response = requests.post(url, headers=headers)
 	code = response.status_code
 	print "status:" + str(code)
 
@@ -109,8 +111,9 @@ def delete_group():
 
 	else:
 		url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	        headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
 		print "Calling " + str(url)
-		response = requests.delete(url)
+		response = requests.delete(url, headers=headers)
 		code = response.status_code
 		print "status:" + str(code)
 
@@ -123,8 +126,9 @@ def print_group():
 	group_path = raw_input("Path: ")
 
 	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
 	print "Calling " + str(url)
-	response = requests.get(url)
+	response = requests.get(url, headers=headers)
 	pp = pprint.PrettyPrinter(indent=4, depth=4)
 	pp.pprint(response.json())
 
@@ -144,9 +148,10 @@ def add_user_to_group():
 	json_data = json.dumps(data)
 
 	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
 	print "Calling " + str(url)
 	print "json_data:" + str(json_data)
-	response = requests.patch(url, json_data)
+	response = requests.patch(url, json_data, headers=headers)
 	code = response.status_code
 	print "status:" + str(code)
 
@@ -166,8 +171,9 @@ def delete_user_from_group():
 	json_data = json.dumps(data)
 
 	url = CONFIG['base_url'] + "/security/group" + str(group_path)
+	headers = {"Authorization":"Bearer "+str(CONFIG["bearer"])}
 	print "Calling " + str(url)
-	response = requests.patch(url, json_data)
+	response = requests.patch(url, json_data, headers=headers)
 	code = response.status_code
 	print "status:" + str(code)
 
